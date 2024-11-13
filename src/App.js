@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import MoviesList from './components/MoviesList';
 import './App.css';
+import AddMovie from './components/AddMovie';
 
 function App() {
   const [moviesList, setMoviesList] = useState([]);
@@ -8,35 +9,29 @@ function App() {
   const [error, setError] = useState(null);
   const [retrying, setRetrying] = useState(false);
   const [retryingTimeout, setRetryingTimeout] = useState(null);
-  
-  const [newMovie, setNewMovie] = useState({
-    title: '',
-    openingText: '',
-    releaseDate: '',
-  });
-
-  const [showModal, setShowModal] = useState(false);
 
   const fetchMoviesHandler = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-
     try {
-      const response = await fetch("https://swapi.dev/api/films/");
+      const response = await fetch("https://movie-fetch-4cd09-default-rtdb.firebaseio.com/movies.json");
       if (!response.ok) {
         throw new Error("Something went wrong... Retrying");
       }
-
       const data = await response.json();
 
-      const transformedMovies = data.results.map((movieData) => ({
-        id: movieData.episode_id,
-        title: movieData.title,
-        openingText: movieData.opening_crawl,
-        releaseDate: movieData.release_date,
-      }));
+      const loadedMovies = [];
 
-      setMoviesList(transformedMovies);
+      for (const key in data) {
+        loadedMovies.push({
+          id: key,
+          title: data[key].title,
+          openingText: data[key].openingText,
+          releaseDate: data[key].releaseDate,
+        });
+      }
+
+      setMoviesList(loadedMovies);
       setRetrying(false);
     } catch (error) {
       setError(error.message);
@@ -44,6 +39,7 @@ function App() {
     }
     setIsLoading(false);
   }, []);
+  
 
   useEffect(() => {
     fetchMoviesHandler();
@@ -54,7 +50,6 @@ function App() {
       const timeoutId = setTimeout(fetchMoviesHandler, 5000);
       setRetryingTimeout(timeoutId);
     }
-
     return () => {
       if (retryingTimeout) {
         clearTimeout(retryingTimeout);
@@ -69,83 +64,50 @@ function App() {
     }
   };
 
-  const addMovieHandler = () => {
-    const newMovieObj = { ...newMovie };
-    console.log(newMovieObj);
-    setMoviesList((prevMovies) => [...prevMovies, newMovieObj]);
-    setNewMovie({
-      title: '',
-      openingText: '',
-      releaseDate: '',
+  const addMovieHandler = async (movie) => {
+    const response = await fetch("https://movie-fetch-4cd09-default-rtdb.firebaseio.com/movies.json", {
+      method: "POST",
+      body: JSON.stringify(movie),
+      headers: {
+        "Content-Type": "application/json",
+      }
     });
-    setShowModal(false);
+
+    const data = await response.json();
+    console.log(data);
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewMovie((prevMovie) => ({
-      ...prevMovie,
-      [name]: value,
-    }));
+  const deleteMovieHandler = async (id) => {
+    const response = await fetch(`https://movie-fetch-4cd09-default-rtdb.firebaseio.com/movies/${id}.json`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  
+    if (!response.ok) {
+      console.error('Failed to delete the movie');
+      return;
+    }
+    console.log(`Movie with id ${id} was deleted`);
+    fetchMoviesHandler(); // Refresh movie list after deletion
   };
-
-  const openModalHandler = () => {
-    setShowModal(true);
-  };
-
-  const closeModalHandler = () => {
-    setShowModal(false);
-  };
-
+  
   return (
     <React.Fragment>
       <section>
-        <button onClick={openModalHandler}>Add Movie</button>
+        <AddMovie onAddMovie={addMovieHandler} />
+        <br />
         <button onClick={fetchMoviesHandler}>Fetch Movies</button>
         {retrying && (
           <button onClick={cancelRetryingHandler}>Cancel Retrying</button>
         )}
       </section>
 
-      {showModal && (
-        <div className="modal">
-          <div className="modal-content">
-            <span className="close" onClick={closeModalHandler}>&times;</span>
-            <h2>Add New Movie</h2>
-            <div>
-              <label>Title</label>
-              <input
-                type="text"
-                name="title"
-                value={newMovie.title}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div>
-              <label>Opening Text</label>
-              <input
-                type="text"
-                name="openingText"
-                value={newMovie.openingText}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div>
-              <label>Release Date</label>
-              <input
-                type="text"
-                name="releaseDate"
-                value={newMovie.releaseDate}
-                onChange={handleInputChange}
-              />
-            </div>
-            <button onClick={addMovieHandler}>Add Movie</button>
-          </div>
-        </div>
-      )}
-
       <section>
-        {!isLoading && moviesList.length > 0 && <MoviesList movies={moviesList} />}
+        {!isLoading && moviesList.length > 0 && (
+          <MoviesList movies={moviesList} onDeleteMovie={deleteMovieHandler} />
+        )}
         {!isLoading && moviesList.length === 0 && !error && <p>Found no Movies..!</p>}
         {isLoading && <p>Loading...</p>}
         {!isLoading && error && <p>{error}</p>}
