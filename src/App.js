@@ -8,6 +8,14 @@ function App() {
   const [error, setError] = useState(null);
   const [retrying, setRetrying] = useState(false);
   const [retryingTimeout, setRetryingTimeout] = useState(null);
+  
+  const [newMovie, setNewMovie] = useState({
+    title: '',
+    openingText: '',
+    releaseDate: '',
+  });
+
+  const [showModal, setShowModal] = useState(false);
 
   const fetchMoviesHandler = useCallback(async () => {
     setIsLoading(true);
@@ -37,11 +45,9 @@ function App() {
     setIsLoading(false);
   }, []);
 
-
   useEffect(() => {
     fetchMoviesHandler();
-  }, [fetchMoviesHandler])
-
+  }, [fetchMoviesHandler]);
 
   useEffect(() => {
     if (retrying) {
@@ -63,14 +69,81 @@ function App() {
     }
   };
 
+  const addMovieHandler = () => {
+    const newMovieObj = { ...newMovie };
+    console.log(newMovieObj);
+    setMoviesList((prevMovies) => [...prevMovies, newMovieObj]);
+    setNewMovie({
+      title: '',
+      openingText: '',
+      releaseDate: '',
+    });
+    setShowModal(false);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewMovie((prevMovie) => ({
+      ...prevMovie,
+      [name]: value,
+    }));
+  };
+
+  const openModalHandler = () => {
+    setShowModal(true);
+  };
+
+  const closeModalHandler = () => {
+    setShowModal(false);
+  };
+
   return (
     <React.Fragment>
       <section>
+        <button onClick={openModalHandler}>Add Movie</button>
         <button onClick={fetchMoviesHandler}>Fetch Movies</button>
         {retrying && (
           <button onClick={cancelRetryingHandler}>Cancel Retrying</button>
         )}
       </section>
+
+      {showModal && (
+        <div className="modal">
+          <div className="modal-content">
+            <span className="close" onClick={closeModalHandler}>&times;</span>
+            <h2>Add New Movie</h2>
+            <div>
+              <label>Title</label>
+              <input
+                type="text"
+                name="title"
+                value={newMovie.title}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div>
+              <label>Opening Text</label>
+              <input
+                type="text"
+                name="openingText"
+                value={newMovie.openingText}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div>
+              <label>Release Date</label>
+              <input
+                type="text"
+                name="releaseDate"
+                value={newMovie.releaseDate}
+                onChange={handleInputChange}
+              />
+            </div>
+            <button onClick={addMovieHandler}>Add Movie</button>
+          </div>
+        </div>
+      )}
+
       <section>
         {!isLoading && moviesList.length > 0 && <MoviesList movies={moviesList} />}
         {!isLoading && moviesList.length === 0 && !error && <p>Found no Movies..!</p>}
