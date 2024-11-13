@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import MoviesList from './components/MoviesList';
 import './App.css';
 
@@ -6,10 +6,10 @@ function App() {
   const [moviesList, setMoviesList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [retrying, setRetrying] = useState(false); 
+  const [retrying, setRetrying] = useState(false);
   const [retryingTimeout, setRetryingTimeout] = useState(null);
 
-  const fetchMoviesHandler = async () => {
+  const fetchMoviesHandler = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -29,13 +29,18 @@ function App() {
       }));
 
       setMoviesList(transformedMovies);
-      setRetrying(false); 
+      setRetrying(false);
     } catch (error) {
       setError(error.message);
-      setRetrying(true); 
+      setRetrying(true);
     }
     setIsLoading(false);
-  };
+  }, []);
+
+
+  useEffect(() => {
+    fetchMoviesHandler();
+  }, [fetchMoviesHandler])
 
 
   useEffect(() => {
